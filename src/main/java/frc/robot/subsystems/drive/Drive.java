@@ -12,7 +12,6 @@ import edu.wpi.first.math.kinematics.SwerveModulePosition;
 import edu.wpi.first.math.kinematics.SwerveModuleState;
 import edu.wpi.first.math.numbers.N3;
 import edu.wpi.first.math.util.Units;
-import edu.wpi.first.networktables.GenericEntry;
 import edu.wpi.first.networktables.NetworkTableInstance;
 import edu.wpi.first.networktables.StructArrayPublisher;
 import edu.wpi.first.wpilibj.DriverStation;
@@ -54,18 +53,10 @@ public class Drive extends SubsystemBase {
 
     private final GyroIO gyroIO;
     private final GyroIO.GyroIOInputs gyroInputs = new GyroIO.GyroIOInputs();
-    private GenericEntry gyroYawDebug;
-    private GenericEntry gyroRollDebug;
-    private GenericEntry gyroPitchDebug;
-    private GenericEntry poseXDebug;
-    private GenericEntry poseYDebug;
-    private GenericEntry poseRotDebug;
     private final Module[] modules = new Module[4]; // FL, FR, BL, BR
 
-    private SwerveDriveKinematics kinematics = new SwerveDriveKinematics(getModuleTranslations());
-    private Pose2d pose = new Pose2d();
-    private Rotation2d lastGyroRotation = new Rotation2d();
-    private StructArrayPublisher<SwerveModuleState> publisher;
+    private final SwerveDriveKinematics kinematics = new SwerveDriveKinematics(getModuleTranslations());
+    private final StructArrayPublisher<SwerveModuleState> statePublisher;
     private boolean isFieldOriented = true;
     private ChassisSpeeds robotRelativeSpeeds;
 
@@ -91,11 +82,8 @@ public class Drive extends SubsystemBase {
         // THE ORIGIN WILL REMAIN ON THE BLUE SIDE
 
         var alliance = DriverStation.getAlliance();
-        if (alliance.isPresent()) {
-            return alliance.get() == DriverStation.Alliance.Red;
-        }
-        return false;
-    },
+                        return alliance.filter(value -> value == Alliance.Red).isPresent();
+                    },
             this // Reference to this subsystem to set requirements
             );
 
@@ -128,8 +116,9 @@ public class Drive extends SubsystemBase {
 
         tab.addString("Pose", this::getFormattedPose).withPosition(0, 0).withSize(2, 0);
         tab.add("Field", field2d).withPosition(2, 0).withSize(6, 4);
+        tab.add("Rotation", this.getCurrentPose().getRotation().getRadians());
 
-        publisher = NetworkTableInstance
+        statePublisher = NetworkTableInstance
                 .getDefault()
                 .getStructArrayTopic("MyStates", SwerveModuleState.struct)
                 .publish();
@@ -174,12 +163,6 @@ public class Drive extends SubsystemBase {
         field2d.setRobotPose(getCurrentPose());
     }
 
-    /**
-     * Runs the drive at the desired velocity.
-     *
-//     * @param speeds Speeds in meters/sec
-     */
-
         public void setOrientation(Translation2d linearVelocity, double omega){
             Rotation2d rotation;
             if (isFieldOriented) {
@@ -212,7 +195,7 @@ public class Drive extends SubsystemBase {
 
         optimizedSetpointStates = setpointStates;
 
-        publisher.set(optimizedSetpointStates);
+        statePublisher.set(optimizedSetpointStates);
     }
 
     public ChassisSpeeds getRobotRelativeSpeeds()
