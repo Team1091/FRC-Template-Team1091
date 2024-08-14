@@ -18,10 +18,6 @@ import java.util.function.DoubleSupplier;
 
 public class DriveCommand {
     private static ShuffleboardTab tab = Shuffleboard.getTab("General");
-    //    private static GenericEntry xLog, yLog, zLog;
-    private static GenericEntry xLog = tab.add("x forward", Optional.of(0.0)).getEntry();
-    private static GenericEntry yLog = tab.add("y left", Optional.of(0.0)).getEntry();
-    private static GenericEntry zLog = tab.add("z rotate ccw", Optional.of(0.0)).getEntry();
 
     private DriveCommand() {
     }
@@ -47,11 +43,6 @@ public class DriveCommand {
                     // Square values
                     linearMagnitude = linearMagnitude * linearMagnitude;
                     omega = Math.copySign(omega * omega, omega);
-
-                    // Log inputs after deadband and square
-                    xLog.setDouble(linearDirection.getCos() * linearMagnitude);
-                    yLog.setDouble(linearDirection.getSin() * linearMagnitude);
-                    zLog.setDouble(omega);
 
                     // Calculate new linear velocity
                     Translation2d linearVelocity =

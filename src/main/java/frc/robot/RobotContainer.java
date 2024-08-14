@@ -7,17 +7,12 @@ package frc.robot;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
-import edu.wpi.first.wpilibj.GenericHID;
-import edu.wpi.first.wpilibj.Joystick;
-import edu.wpi.first.wpilibj.XboxController;
 import edu.wpi.first.wpilibj.shuffleboard.BuiltInWidgets;
 import edu.wpi.first.wpilibj.shuffleboard.Shuffleboard;
 import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
 import edu.wpi.first.wpilibj2.command.*;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
-import edu.wpi.first.wpilibj2.command.button.JoystickButton;
 import frc.robot.commands.*;
-import frc.robot.subsystems.PoseEstimationSubsystem;
 import frc.robot.subsystems.TemplateSubsystem;
 import frc.robot.subsystems.drive.Drive;
 import frc.robot.subsystems.drive.GyroIONavX;
@@ -34,7 +29,6 @@ import org.photonvision.PhotonCamera;
 public class RobotContainer {
     // Subsystems
     private Drive drive;
-    private final PoseEstimationSubsystem poseEstimationSubsystem;
     private final TemplateSubsystem templateSubsystem = new TemplateSubsystem();
 
     //Miscellaneous
@@ -54,7 +48,7 @@ public class RobotContainer {
                 new ModuleIOTalonFX(FRONT_RIGHT),
                 new ModuleIOTalonFX(BACK_LEFT),
                 new ModuleIOTalonFX(BACK_RIGHT),
-                poseEstimationSubsystem = new PoseEstimationSubsystem(photonCamera, drive)
+                new PhotonCamera("limelight")
         );
 
         //Add in named commands for pathplanner
@@ -71,7 +65,7 @@ public class RobotContainer {
 
     //Actions run when robot is enabled
     public void robotEnabled() {
-        poseEstimationSubsystem.setCurrentPose(new Pose2d(new Translation2d(0, 0), new Rotation2d(0)));
+        drive.setCurrentPose(new Pose2d(new Translation2d(0, 0), new Rotation2d(0)));
         drive.straightenWheels();
         drive.resetGyro();
         drive.setFieldState(true);
@@ -85,7 +79,7 @@ public class RobotContainer {
         driver.a().whileTrue(new TemplateCommand(templateSubsystem, Constants.Template.motorSpeed));
 
         //Drive
-        driver.povUp().onTrue(runOnce(poseEstimationSubsystem::resetFieldPosition));
+        driver.povUp().onTrue(runOnce(drive::resetFieldPosition));
         driver.povLeft().onTrue(runOnce(() -> drive.toggleIsFieldOriented()));
 
         drive.setDefaultCommand(

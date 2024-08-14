@@ -63,13 +63,6 @@ public class Module {
         this.io = io;
         this.index = index;
 
-        // Set up shuffleboard
-        var tab = Shuffleboard.getTab(title);
-        realAngle = tab.add("Real Angle" + title, Optional.of(0)).getEntry();
-        realVelocity = tab.add("Real Velocity" + title, Optional.of(0)).getEntry();
-        targetAngle = tab.add("Target Angle" + title, Optional.of(0)).getEntry();
-        targetVelocity = tab.add("Target Velocity" + title, Optional.of(0)).getEntry();
-
         var config = configs[index];
 
         // Constants here may change for SIM
@@ -123,11 +116,6 @@ public class Module {
                                 + driveFeedback.calculate(inputs.driveVelocityRadPerSec, velocityRadPerSec));
             }
         }
-
-        // Logging
-        realAngle.setDouble(getState().angle.getDegrees());
-        realVelocity.setDouble(getState().speedMetersPerSecond);
-
     }
 
     /**
@@ -141,10 +129,6 @@ public class Module {
         // Update setpoints, controllers run in "periodic"
         angleSetpoint = optimizedState.angle;
         speedSetpoint = Double.valueOf(optimizedState.speedMetersPerSecond);
-
-        // Logging
-        targetAngle.setDouble(angleSetpoint.getDegrees());
-        targetVelocity.setDouble(speedSetpoint);
 
         return optimizedState;
     }
