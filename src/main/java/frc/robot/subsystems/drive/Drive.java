@@ -2,6 +2,7 @@ package frc.robot.subsystems.drive;
 
 import edu.wpi.first.apriltag.AprilTagFieldLayout;
 import edu.wpi.first.apriltag.AprilTagFields;
+import edu.wpi.first.hal.SimDouble;
 import edu.wpi.first.math.VecBuilder;
 import edu.wpi.first.math.Vector;
 import edu.wpi.first.math.estimator.SwerveDrivePoseEstimator;
@@ -17,6 +18,7 @@ import edu.wpi.first.networktables.StructArrayPublisher;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.shuffleboard.Shuffleboard;
 import edu.wpi.first.wpilibj.shuffleboard.ShuffleboardTab;
+import edu.wpi.first.wpilibj.simulation.EncoderSim;
 import edu.wpi.first.wpilibj.smartdashboard.Field2d;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.Constants;
@@ -37,12 +39,14 @@ import static frc.robot.Constants.Swerve.*;
 
 public class Drive extends SubsystemBase {
 
+    //Constants
     private static final double MAX_LINEAR_SPEED = Constants.Swerve.maxLinearSpeed;
     private static final double TRACK_WIDTH_X = Constants.Swerve.trackWidthX;
     private static final double TRACK_WIDTH_Y = Constants.Swerve.trackWidthY;
     private static final double DRIVE_BASE_RADIUS = Constants.Swerve.driveBaseRadius;
     private static final double MAX_ANGULAR_SPEED = MAX_LINEAR_SPEED / DRIVE_BASE_RADIUS;
 
+    //Pose Estimation
     private final PhotonCamera photonCamera;
     private final AprilTagFieldLayout aprilTagFieldLayout;
     private static final Vector<N3> stateStdDevs = VecBuilder.fill(0.05, 0.05, Units.degreesToRadians(5));
@@ -51,10 +55,12 @@ public class Drive extends SubsystemBase {
     private final Field2d field2d = new Field2d();
     private double previousPipelineTimestamp = 0;
 
+    //Hardware
     private final GyroIO gyroIO;
     private final GyroIO.GyroIOInputs gyroInputs = new GyroIO.GyroIOInputs();
     private final Module[] modules = new Module[4]; // FL, FR, BL, BR
 
+    //Other Vars
     private final SwerveDriveKinematics kinematics = new SwerveDriveKinematics(getModuleTranslations());
     private final StructArrayPublisher<SwerveModuleState> statePublisher;
     private boolean isFieldOriented = true;

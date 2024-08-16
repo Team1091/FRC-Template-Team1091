@@ -62,7 +62,6 @@ public class RobotContainer {
         Shuffleboard.getTab("General").add("Auto Choice", autoChooser).withWidget(BuiltInWidgets.kComboBoxChooser);
     }
 
-
     //Actions run when robot is enabled
     public void robotEnabled() {
         drive.setCurrentPose(new Pose2d(new Translation2d(0, 0), new Rotation2d(0)));
