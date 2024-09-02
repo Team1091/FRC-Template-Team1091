@@ -40,13 +40,17 @@ public final class Constants {
                 new Translation2d(-Swerve.trackWidthX / 2.0, -Swerve.trackWidthY / 2.0)
         );
 
-        public static final Transform3d CAMERA_TO_ROBOT =
-                new Transform3d(new Translation3d(-0.3425, 0.0, -0.233), new Rotation3d());
+        public static final Transform3d CAMERA_TO_ROBOT = new Transform3d(//must change based on where camera is on robot
+                new Translation3d(-0.3425, 0.0, -0.233),
+                new Rotation3d()
+        );
     }
 
-    // TODO
     public static final class Template {
-        public final static int motorChannel = 1;
+        public final static int pwmMotorChannel = 1;
+        public final static int canMotorChannel = 2;
+        public final static int encoderChannel1 = 1;
+        public final static int encoderChannel2 = 2;
         public final static double motorSpeed = 1;
     }
 
@@ -56,7 +60,6 @@ public final class Constants {
             Swerve.maxLinearSpeed,
             driveBaseRadius, // Drive base radius (distance from center to furthest module)
             new ReplanningConfig());
-
 
     public static final double linearDeadband = 0.1;
     public static final double rotationalDeadband = .1;

@@ -69,6 +69,8 @@ public class RobotContainer {
         drive.straightenWheels();
         drive.resetGyro();
         drive.setFieldState(true);
+
+        templateSubsystem.resetEncoder();
     }
 
 
