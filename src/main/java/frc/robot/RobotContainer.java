@@ -33,7 +33,6 @@ public class RobotContainer {
     private final TemplateSubsystem templateSubsystem = new TemplateSubsystem();
 
     //Miscellaneous
-    private final PhotonCamera photonCamera = new PhotonCamera("camera");
     private final SendableChooser<AutoChoice> autoChooser = new SendableChooser<>();
 
     // Controllers
@@ -82,7 +81,8 @@ public class RobotContainer {
 
         //Drive
         driver.povUp().onTrue(runOnce(drive::resetFieldPosition));
-        driver.povLeft().onTrue(runOnce(() -> drive.toggleIsFieldOriented()));
+        driver.povLeft().onTrue(runOnce(drive::toggleIsFieldOriented));
+        driver.povRight().onTrue(new DriveToPoseCommand(drive, 0, 0, 0));
 
         drive.setDefaultCommand(
                 DriveCommand.joystickDrive(

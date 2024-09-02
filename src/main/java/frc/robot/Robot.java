@@ -4,6 +4,7 @@
 
 package frc.robot;
 
+import com.pathplanner.lib.commands.FollowPathCommand;
 import edu.wpi.first.cameraserver.CameraServer;
 import edu.wpi.first.wpilibj.TimedRobot;
 import edu.wpi.first.wpilibj.shuffleboard.BuiltInWidgets;
@@ -26,6 +27,9 @@ public class Robot extends TimedRobot {
 
         //starts camera with settings
         CameraServer.startAutomaticCapture().setExposureManual(40);
+
+        //warms up path planner to avoid delay on first path
+        FollowPathCommand.warmupCommand().schedule();
     }
 
     //Runs actions over and over when robot is powered on
