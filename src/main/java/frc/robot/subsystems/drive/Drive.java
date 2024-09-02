@@ -49,8 +49,8 @@ public class Drive extends SubsystemBase {
     //Pose Estimation
     private final PhotonCamera photonCamera;
     private final AprilTagFieldLayout aprilTagFieldLayout;
-    private static final Vector<N3> stateStdDevs = VecBuilder.fill(0.05, 0.05, Units.degreesToRadians(5));
-    private static final Vector<N3> visionMeasurementStdDevs = VecBuilder.fill(0.5, 0.5, Units.degreesToRadians(10));
+    private static final Vector<N3> stateStdDevs = VecBuilder.fill(0.05, 0.05, Units.degreesToRadians(5));//changes how much gyro and odometry affects pose
+    private static final Vector<N3> visionMeasurementStdDevs = VecBuilder.fill(0.5, 0.5, Units.degreesToRadians(10));//changes how much vision affects pose
     private final SwerveDrivePoseEstimator poseEstimator;
     private final Field2d field2d = new Field2d();
     private double previousPipelineTimestamp = 0;
@@ -77,21 +77,21 @@ public class Drive extends SubsystemBase {
         this.photonCamera = photonCamera;
 
         AutoBuilder.configureHolonomic(
-            this::getCurrentPose, // Robot pose supplier
-            this::setCurrentPose, // Method to reset odometry (will be called if your auto has a starting pose)
-            this::getRobotRelativeSpeeds, // ChassisSpeeds supplier. MUST BE ROBOT RELATIVE
-            this::runVelocity, // Method that will drive the robot given ROBOT RELATIVE ChassisSpeeds
-            Constants.pathFollowerConfig,
-                    () -> {
-        // Boolean supplier that controls when the path will be mirrored for the red alliance
-        // This will flip the path being followed to the red side of the field.
-        // THE ORIGIN WILL REMAIN ON THE BLUE SIDE
+                this::getCurrentPose, // Robot pose supplier
+                this::setCurrentPose, // Method to reset odometry (will be called if your auto has a starting pose)
+                this::getRobotRelativeSpeeds, // ChassisSpeeds supplier. MUST BE ROBOT RELATIVE
+                this::runVelocity, // Method that will drive the robot given ROBOT RELATIVE ChassisSpeeds
+                Constants.pathFollowerConfig,
+                () -> {
+                    // Boolean supplier that controls when the path will be mirrored for the red alliance
+                    // This will flip the path being followed to the red side of the field.
+                    // THE ORIGIN WILL REMAIN ON THE BLUE SIDE
 
-        var alliance = DriverStation.getAlliance();
-                        return alliance.filter(value -> value == Alliance.Red).isPresent();
-                    },
-            this // Reference to this subsystem to set requirements
-            );
+                    var alliance = DriverStation.getAlliance();
+                    return alliance.filter(value -> value == Alliance.Red).isPresent();
+                },
+                this // Reference to this subsystem to set requirements
+        );
 
         modules[FRONT_LEFT] = new Module(flModuleIO, 0, "FL");
         modules[FRONT_RIGHT] = new Module(frModuleIO, 1, "FR");
@@ -100,11 +100,11 @@ public class Drive extends SubsystemBase {
 
         AprilTagFieldLayout layout;
         try {
-            layout = AprilTagFieldLayout.loadFromResource(AprilTagFields.k2023ChargedUp.m_resourceFile);
+            layout = AprilTagFieldLayout.loadFromResource(AprilTagFields.k2024Crescendo.m_resourceFile);//must change every season for different fields
             var alliance = DriverStation.getAlliance();
             layout.setOrigin(alliance.equals(Alliance.Blue) ?
                     AprilTagFieldLayout.OriginPosition.kBlueAllianceWallRightSide : AprilTagFieldLayout.OriginPosition.kRedAllianceWallRightSide);
-        } catch(IOException e) {
+        } catch (IOException e) {
             DriverStation.reportError("Failed to load AprilTagFieldLayout", e.getStackTrace());
             layout = null;
         }
@@ -112,17 +112,16 @@ public class Drive extends SubsystemBase {
 
         ShuffleboardTab tab = Shuffleboard.getTab("Vision");
 
-        poseEstimator =  new SwerveDrivePoseEstimator(
+        poseEstimator = new SwerveDrivePoseEstimator(
                 Constants.PoseEstimation.kinematics,
                 this.getGyroRotation(),
                 this.getModulePositions(),
-                new Pose2d(),
+                new Pose2d(),//must change unless starting at (0, 0) I think
                 stateStdDevs,
                 visionMeasurementStdDevs);
 
         tab.addString("Pose", this::getFormattedPose).withPosition(0, 0).withSize(2, 0);
         tab.add("Field", field2d).withPosition(2, 0).withSize(6, 4);
-        tab.add("Rotation", this.getCurrentPose().getRotation().getRadians());
 
         statePublisher = NetworkTableInstance
                 .getDefault()
@@ -161,6 +160,7 @@ public class Drive extends SubsystemBase {
                 poseEstimator.addVisionMeasurement(visionMeasurement.toPose2d(), resultTimestamp);
             }
         }
+
         // Update pose estimator with drivetrain sensors
         poseEstimator.update(
                 this.getGyroRotation(),
@@ -169,23 +169,23 @@ public class Drive extends SubsystemBase {
         field2d.setRobotPose(getCurrentPose());
     }
 
-        public void setOrientation(Translation2d linearVelocity, double omega){
-            Rotation2d rotation;
-            if (isFieldOriented) {
-                rotation = getCurrentPose().getRotation();
-            } else {
-                rotation = new Rotation2d(0);
-            }
-             robotRelativeSpeeds = ChassisSpeeds.fromFieldRelativeSpeeds(
-                    linearVelocity.getX() * MAX_LINEAR_SPEED,
-                    linearVelocity.getY() * MAX_LINEAR_SPEED,
-                    omega * MAX_ANGULAR_SPEED,
-                    rotation
-            );
-            runVelocity(robotRelativeSpeeds);
+    public void setOrientation(Translation2d linearVelocity, double omega) {
+        Rotation2d rotation;
+        if (isFieldOriented) {
+            rotation = getCurrentPose().getRotation();
+        } else {
+            rotation = new Rotation2d(0);
         }
+        robotRelativeSpeeds = ChassisSpeeds.fromFieldRelativeSpeeds(
+                linearVelocity.getX() * MAX_LINEAR_SPEED,
+                linearVelocity.getY() * MAX_LINEAR_SPEED,
+                omega * MAX_ANGULAR_SPEED,
+                rotation
+        );
+        runVelocity(robotRelativeSpeeds);
+    }
 
-        public void runVelocity(ChassisSpeeds chassisSpeeds) {
+    public void runVelocity(ChassisSpeeds chassisSpeeds) {
 
         // Calculate module setpoints
         ChassisSpeeds discreteSpeeds = ChassisSpeeds.discretize(chassisSpeeds, 0.02);
@@ -204,8 +204,7 @@ public class Drive extends SubsystemBase {
         statePublisher.set(optimizedSetpointStates);
     }
 
-    public ChassisSpeeds getRobotRelativeSpeeds()
-    {
+    public ChassisSpeeds getRobotRelativeSpeeds() {
         return robotRelativeSpeeds;
     }
 
@@ -216,9 +215,10 @@ public class Drive extends SubsystemBase {
         runVelocity(new ChassisSpeeds());
     }
 
-    public void setFieldState(boolean bool){
+    public void setFieldState(boolean bool) {
         isFieldOriented = bool;
     }
+
     public void toggleIsFieldOriented() {
         isFieldOriented = !isFieldOriented;
     }
@@ -281,7 +281,9 @@ public class Drive extends SubsystemBase {
         gyroIO.resetGyro();
     }
 
-    public Rotation2d getGyroRotation() {return new Rotation2d(gyroInputs.yawPosition.getRadians());}
+    public Rotation2d getGyroRotation() {
+        return new Rotation2d(gyroInputs.yawPosition.getRadians());
+    }
 
     private String getFormattedPose() {
         var pose = getCurrentPose();
@@ -297,6 +299,7 @@ public class Drive extends SubsystemBase {
      * Resets the current pose to the specified pose. This should ONLY be called
      * when the robot's position on the field is known, like at the beginning of
      * a match.
+     *
      * @param newPose new pose
      */
     public void setCurrentPose(Pose2d newPose) {

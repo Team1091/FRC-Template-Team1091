@@ -9,7 +9,9 @@ import com.ctre.phoenix6.hardware.Pigeon2;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.util.Units;
 
-/** IO implementation for Pigeon2 */
+/**
+ * IO implementation for Pigeon2
+ */
 public class GyroIOPigeon2 implements GyroIO {
     private final Pigeon2 pigeon = new Pigeon2(6);
     private final StatusSignal<Double> yaw = pigeon.getYaw();

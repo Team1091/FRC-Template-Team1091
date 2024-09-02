@@ -16,6 +16,7 @@ import frc.robot.commands.*;
 import frc.robot.subsystems.TemplateSubsystem;
 import frc.robot.subsystems.drive.Drive;
 import frc.robot.subsystems.drive.GyroIONavX;
+import frc.robot.subsystems.drive.GyroIOPigeon2;
 import frc.robot.subsystems.drive.ModuleIOTalonFX;
 
 import static edu.wpi.first.wpilibj2.command.Commands.runOnce;
@@ -43,12 +44,12 @@ public class RobotContainer {
     //Define stuff in here
     public RobotContainer() {
         drive = new Drive(
-                new GyroIONavX(),
+                new GyroIOPigeon2(),//change if using different gyro
                 new ModuleIOTalonFX(FRONT_LEFT),
                 new ModuleIOTalonFX(FRONT_RIGHT),
                 new ModuleIOTalonFX(BACK_LEFT),
                 new ModuleIOTalonFX(BACK_RIGHT),
-                new PhotonCamera("limelight")
+                new PhotonCamera("limelight")//name must be the same as in photon vision
         );
 
         //Add in named commands for pathplanner
@@ -84,7 +85,7 @@ public class RobotContainer {
         drive.setDefaultCommand(
                 DriveCommand.joystickDrive(
                         drive,
-                        () -> { // x forward is front, -x is backward
+                        () -> { // x+ forward is front, x- is backward
 //                            return joystick.getY();
                             return driver.getLeftY();
                         },

@@ -30,7 +30,7 @@ public class DriveCommand {
             DoubleSupplier xSupplier,
             DoubleSupplier ySupplier,
             DoubleSupplier omegaSupplier
-            ) {
+    ) {
         return Commands.run(
                 () -> {
                     // Apply deadband
