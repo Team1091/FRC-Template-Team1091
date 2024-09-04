@@ -40,7 +40,7 @@ public class DriveToPoseCommand extends Command {
 
         PathPlannerPath path = new PathPlannerPath(
                 bezierPoints,
-                new PathConstraints(3.0, 3.0, 2 * Math.PI, 4 * Math.PI),
+                new PathConstraints(Constants.Swerve.maxLinearSpeed, Constants.Swerve.maxLinearAcceleration, Constants.Swerve.maxAngularSpeed, Constants.Swerve.maxAngularAcceleration),
                 new GoalEndState(0.0, finalRotation)
         );
 
