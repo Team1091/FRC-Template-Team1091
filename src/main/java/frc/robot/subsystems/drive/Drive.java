@@ -1,35 +1,19 @@
 package frc.robot.subsystems.drive;
 
-import edu.wpi.first.apriltag.AprilTagFieldLayout;
-import edu.wpi.first.apriltag.AprilTagFields;
-import edu.wpi.first.hal.SimDouble;
-import edu.wpi.first.math.VecBuilder;
-import edu.wpi.first.math.Vector;
-import edu.wpi.first.math.estimator.SwerveDrivePoseEstimator;
-import edu.wpi.first.math.geometry.*;
+import edu.wpi.first.math.geometry.Pose2d;
+import edu.wpi.first.math.geometry.Rotation2d;
+import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.math.kinematics.SwerveDriveKinematics;
 import edu.wpi.first.math.kinematics.SwerveModulePosition;
 import edu.wpi.first.math.kinematics.SwerveModuleState;
-import edu.wpi.first.math.numbers.N3;
 import edu.wpi.first.math.util.Units;
+import edu.wpi.first.networktables.GenericEntry;
 import edu.wpi.first.networktables.NetworkTableInstance;
 import edu.wpi.first.networktables.StructArrayPublisher;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.shuffleboard.Shuffleboard;
-import edu.wpi.first.wpilibj.shuffleboard.ShuffleboardTab;
-import edu.wpi.first.wpilibj.simulation.EncoderSim;
-import edu.wpi.first.wpilibj.smartdashboard.Field2d;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
-import frc.robot.Constants;
-
-import com.pathplanner.lib.auto.AutoBuilder;
-
-import edu.wpi.first.wpilibj.DriverStation.Alliance;
-import org.photonvision.PhotonCamera;
-
-import java.io.IOException;
-import java.util.Optional;
 
 import static frc.robot.Constants.Swerve.*;
 
@@ -39,94 +23,52 @@ import static frc.robot.Constants.Swerve.*;
 
 public class Drive extends SubsystemBase {
 
-    //Constants
-    private static final double MAX_LINEAR_SPEED = Constants.Swerve.maxLinearSpeed;
-    private static final double TRACK_WIDTH_X = Constants.Swerve.trackWidthX;
-    private static final double TRACK_WIDTH_Y = Constants.Swerve.trackWidthY;
-    private static final double DRIVE_BASE_RADIUS = Constants.Swerve.driveBaseRadius;
+    private static final double MAX_LINEAR_SPEED = Units.feetToMeters(14.5);
+    private static final double TRACK_WIDTH_X = Units.inchesToMeters(25.0);
+    private static final double TRACK_WIDTH_Y = Units.inchesToMeters(25.0);
+    private static final double DRIVE_BASE_RADIUS =
+            Math.hypot(TRACK_WIDTH_X / 2.0, TRACK_WIDTH_Y / 2.0);
     private static final double MAX_ANGULAR_SPEED = MAX_LINEAR_SPEED / DRIVE_BASE_RADIUS;
 
-    //Pose Estimation
-    private final PhotonCamera photonCamera;
-    private final AprilTagFieldLayout aprilTagFieldLayout;
-    private static final Vector<N3> stateStdDevs = VecBuilder.fill(0.05, 0.05, Units.degreesToRadians(5));//changes how much gyro and odometry affects pose
-    private static final Vector<N3> visionMeasurementStdDevs = VecBuilder.fill(0.5, 0.5, Units.degreesToRadians(10));//changes how much vision affects pose
-    private final SwerveDrivePoseEstimator poseEstimator;
-    private final Field2d field2d = new Field2d();
-    private double previousPipelineTimestamp = 0;
-
-    //Hardware
     private final GyroIO gyroIO;
     private final GyroIO.GyroIOInputs gyroInputs = new GyroIO.GyroIOInputs();
+    private GenericEntry gyroYawDebug;
+    private GenericEntry gyroRollDebug;
+    private GenericEntry gyroPitchDebug;
+    private GenericEntry poseXDebug;
+    private GenericEntry poseYDebug;
+    private GenericEntry poseRotDebug;
     private final Module[] modules = new Module[4]; // FL, FR, BL, BR
 
-    //Other Vars
-    private final SwerveDriveKinematics kinematics = new SwerveDriveKinematics(getModuleTranslations());
-    private final StructArrayPublisher<SwerveModuleState> statePublisher;
+
+    private SwerveDriveKinematics kinematics = new SwerveDriveKinematics(getModuleTranslations());
+    private Pose2d pose = new Pose2d();
+    private Rotation2d lastGyroRotation = new Rotation2d();
+    private StructArrayPublisher<SwerveModuleState> publisher;
     private boolean isFieldOriented = true;
-    private ChassisSpeeds robotRelativeSpeeds;
 
     public Drive(
             GyroIO gyroIO,
             ModuleIO flModuleIO,
             ModuleIO frModuleIO,
             ModuleIO blModuleIO,
-            ModuleIO brModuleIO, PhotonCamera photonCamera) {
-
+            ModuleIO brModuleIO) {
         this.gyroIO = gyroIO;
-        this.photonCamera = photonCamera;
-
-        AutoBuilder.configureHolonomic(
-                this::getCurrentPose, // Robot pose supplier
-                this::setCurrentPose, // Method to reset odometry (will be called if your auto has a starting pose)
-                this::getRobotRelativeSpeeds, // ChassisSpeeds supplier. MUST BE ROBOT RELATIVE
-                this::runVelocity, // Method that will drive the robot given ROBOT RELATIVE ChassisSpeeds
-                Constants.PathPlanner.pathFollowerConfig,
-                () -> {
-                    // Boolean supplier that controls when the path will be mirrored for the red alliance
-                    // This will flip the path being followed to the red side of the field.
-                    // THE ORIGIN WILL REMAIN ON THE BLUE SIDE
-
-                    var alliance = DriverStation.getAlliance();
-                    return alliance.filter(value -> value == Alliance.Red).isPresent();
-                },
-                this // Reference to this subsystem to set requirements
-        );
-
         modules[FRONT_LEFT] = new Module(flModuleIO, 0, "FL");
         modules[FRONT_RIGHT] = new Module(frModuleIO, 1, "FR");
         modules[BACK_LEFT] = new Module(blModuleIO, 2, "BL");
         modules[BACK_RIGHT] = new Module(brModuleIO, 3, "BR");
 
-        AprilTagFieldLayout layout;
-        try {
-            layout = AprilTagFieldLayout.loadFromResource(AprilTagFields.k2024Crescendo.m_resourceFile);//must change every season for different fields
-            var alliance = DriverStation.getAlliance();
-            layout.setOrigin(alliance.equals(Alliance.Blue) ?
-                    AprilTagFieldLayout.OriginPosition.kBlueAllianceWallRightSide : AprilTagFieldLayout.OriginPosition.kRedAllianceWallRightSide);
-        } catch (IOException e) {
-            DriverStation.reportError("Failed to load AprilTagFieldLayout", e.getStackTrace());
-            layout = null;
-        }
-        this.aprilTagFieldLayout = layout;
-
-        ShuffleboardTab tab = Shuffleboard.getTab("Vision");
-
-        poseEstimator = new SwerveDrivePoseEstimator(
-                Constants.PoseEstimation.kinematics,
-                this.getGyroRotation(),
-                this.getModulePositions(),
-                new Pose2d(),//must change unless starting at (0, 0) I think
-                stateStdDevs,
-                visionMeasurementStdDevs);
-
-        tab.addString("Pose", this::getFormattedPose).withPosition(0, 0).withSize(2, 0);
-        tab.add("Field", field2d).withPosition(2, 0).withSize(6, 4);
-
-        statePublisher = NetworkTableInstance
+        publisher = NetworkTableInstance
                 .getDefault()
                 .getStructArrayTopic("MyStates", SwerveModuleState.struct)
                 .publish();
+        gyroYawDebug = Shuffleboard.getTab("General").add("Gyro Yaw", 0).getEntry();
+        gyroRollDebug = Shuffleboard.getTab("General").add("Gyro Roll", 0).getEntry();
+        gyroPitchDebug = Shuffleboard.getTab("General").add("Gyro Pitch", 0).getEntry();
+        poseXDebug = Shuffleboard.getTab("General").add("Pose X", 0).getEntry();
+        poseYDebug = Shuffleboard.getTab("General").add("Pose Y", 0).getEntry();
+        poseRotDebug = Shuffleboard.getTab("General").add("Pose Rotation", 0).getEntry();
     }
 
     public void periodic() {
@@ -142,53 +84,61 @@ public class Drive extends SubsystemBase {
             }
         }
 
-        // Update pose estimator with the best visible target
-        var pipelineResult = photonCamera.getLatestResult();
-        var resultTimestamp = pipelineResult.getTimestampSeconds();
-        if (resultTimestamp != previousPipelineTimestamp && pipelineResult.hasTargets()) {
-            previousPipelineTimestamp = resultTimestamp;
-            var target = pipelineResult.getBestTarget();
-            var fiducialId = target.getFiducialId();
-            // Get the tag pose from field layout - consider that the layout will be null if it failed to load
-            Optional<Pose3d> tagPose = aprilTagFieldLayout == null ? Optional.empty() : aprilTagFieldLayout.getTagPose(fiducialId);
-            if (target.getPoseAmbiguity() <= .2 && fiducialId >= 0 && tagPose.isPresent()) {
-                var targetPose = tagPose.get();
-                Transform3d camToTarget = target.getBestCameraToTarget();
-                Pose3d camPose = targetPose.transformBy(camToTarget.inverse());
+        // Update odometry
+        SwerveModulePosition[] wheelDeltas = new SwerveModulePosition[4];
+        for (int i = 0; i < 4; i++) {
+            wheelDeltas[i] = modules[i].getPositionDelta();
+        }
 
-                var visionMeasurement = camPose.transformBy(Constants.PoseEstimation.CAMERA_TO_ROBOT);
-                poseEstimator.addVisionMeasurement(visionMeasurement.toPose2d(), resultTimestamp);
+        // The twist represents the motion of the robot since the last
+        // loop cycle in x, y, and theta based only on the modules,
+        // without the gyro. The gyro is always disconnected in simulation.
+        var twist = kinematics.toTwist2d(wheelDeltas);
+        gyroYawDebug.setDouble(gyroInputs.yawPosition.getDegrees());
+        gyroRollDebug.setDouble(gyroInputs.rollPosition.getDegrees());
+        gyroPitchDebug.setDouble(gyroInputs.pitchPosition.getDegrees());
+//        if (gyroInputs.connected) {
+//            // If the gyro is connected, replace the theta component of the twist
+//            // with the change in angle since the last loop cycle.
+//            twist = new Twist2d(
+//                    twist.dx,
+//                    twist.dy,
+//                    gyroInputs.yawPosition.minus(lastGyroRotation).getRadians()
+//            );
+//            lastGyroRotation = gyroInputs.yawPosition;
+//        }
+        // Apply the twist (change since last loop cycle) to the current pose
+        pose = pose.exp(twist);
+
+        poseXDebug.setDouble(pose.getX());
+        poseYDebug.setDouble(pose.getY());
+        poseRotDebug.setDouble(pose.getRotation().getDegrees());
+//
+
+    }
+
+    /**
+     * Runs the drive at the desired velocity.
+     *
+//     * @param speeds Speeds in meters/sec
+     */
+
+        public void runVelocity(Translation2d linearVelocity, double omega) {
+            Rotation2d rotation;
+            if (isFieldOriented) {
+                rotation = getRotation();
+            } else {
+                rotation = new Rotation2d(0);
             }
-        }
-
-        // Update pose estimator with drivetrain sensors
-        poseEstimator.update(
-                this.getGyroRotation(),
-                this.getModulePositions());
-
-        field2d.setRobotPose(getCurrentPose());
-    }
-
-    public void setOrientation(Translation2d linearVelocity, double omega) {
-        Rotation2d rotation;
-        if (isFieldOriented) {
-            rotation = getCurrentPose().getRotation();
-        } else {
-            rotation = new Rotation2d(0);
-        }
-        robotRelativeSpeeds = ChassisSpeeds.fromFieldRelativeSpeeds(
-                linearVelocity.getX() * MAX_LINEAR_SPEED,
-                linearVelocity.getY() * MAX_LINEAR_SPEED,
-                omega * MAX_ANGULAR_SPEED,
-                rotation
-        );
-        runVelocity(robotRelativeSpeeds);
-    }
-
-    public void runVelocity(ChassisSpeeds chassisSpeeds) {
+            ChassisSpeeds speeds = ChassisSpeeds.fromFieldRelativeSpeeds(
+                    linearVelocity.getX() * MAX_LINEAR_SPEED,
+                    linearVelocity.getY() * MAX_LINEAR_SPEED,
+                    omega * MAX_ANGULAR_SPEED,
+                    rotation
+            );
 
         // Calculate module setpoints
-        ChassisSpeeds discreteSpeeds = ChassisSpeeds.discretize(chassisSpeeds, 0.02);
+        ChassisSpeeds discreteSpeeds = ChassisSpeeds.discretize(speeds, 0.02);
         SwerveModuleState[] setpointStates = kinematics.toSwerveModuleStates(discreteSpeeds);
         SwerveDriveKinematics.desaturateWheelSpeeds(setpointStates, MAX_LINEAR_SPEED);
 
@@ -201,24 +151,18 @@ public class Drive extends SubsystemBase {
 
         optimizedSetpointStates = setpointStates;
 
-        statePublisher.set(optimizedSetpointStates);
-    }
-
-    public ChassisSpeeds getRobotRelativeSpeeds() {
-        return robotRelativeSpeeds;
+        publisher.set(optimizedSetpointStates);
     }
 
     /**
      * Stops the drive.
      */
     public void stop() {
-        runVelocity(new ChassisSpeeds());
+        runVelocity(new Translation2d(), 0);
     }
-
-    public void setFieldState(boolean bool) {
+    public void setFieldState(boolean bool){
         isFieldOriented = bool;
     }
-
     public void toggleIsFieldOriented() {
         isFieldOriented = !isFieldOriented;
     }
@@ -269,52 +213,38 @@ public class Drive extends SubsystemBase {
      * Returns the module states (turn angles and drive velocities) for all of the modules.
      */
 //    @AutoLogOutput(key = "SwerveStates/Measured")
-    public SwerveModulePosition[] getModulePositions() {
-        SwerveModulePosition[] positions = new SwerveModulePosition[4];
+    private SwerveModuleState[] getModuleStates() {
+        SwerveModuleState[] states = new SwerveModuleState[4];
         for (int i = 0; i < 4; i++) {
-            positions[i] = modules[i].getPosition();
+            states[i] = modules[i].getState();
         }
-        return positions;
+        return states;
+    }
+
+    /**
+     * Returns the current odometry pose.
+     */
+//    @AutoLogOutput(key = "Odometry/Robot")
+    public Pose2d getPose() {
+        return pose;
+    }
+
+    /**
+     * Returns the current odometry rotation.
+     */
+    public Rotation2d getRotation() {
+        return pose.getRotation();
+    }
+
+    /**
+     * Resets the current odometry pose.
+     */
+    public void setPose(Pose2d pose) {
+        this.pose = pose;
     }
 
     public void resetGyro() {
         gyroIO.resetGyro();
-    }
-
-    public Rotation2d getGyroRotation() {
-        return new Rotation2d(gyroInputs.yawPosition.getRadians());
-    }
-
-    private String getFormattedPose() {
-        var pose = getCurrentPose();
-
-        return "(" + pose.getX() + ", " + pose.getY() + ") " + pose.getRotation().getDegrees() + "degrees";
-    }
-
-    public Pose2d getCurrentPose() {
-        return poseEstimator.getEstimatedPosition();
-    }
-
-    /**
-     * Resets the current pose to the specified pose. This should ONLY be called
-     * when the robot's position on the field is known, like at the beginning of
-     * a match.
-     *
-     * @param newPose new pose
-     */
-    public void setCurrentPose(Pose2d newPose) {
-        poseEstimator.resetPosition(
-                this.getGyroRotation(),
-                this.getModulePositions(),
-                newPose);
-    }
-
-    /**
-     * Resets the position on the field to 0,0 0-degrees, with forward being downfield. This resets
-     * what "forward" is for field oriented driving.
-     */
-    public void resetFieldPosition() {
-        setCurrentPose(new Pose2d());
     }
 
     /**

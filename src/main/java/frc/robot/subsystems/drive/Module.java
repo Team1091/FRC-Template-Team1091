@@ -10,8 +10,6 @@ import edu.wpi.first.networktables.GenericEntry;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.shuffleboard.Shuffleboard;
 
-import java.util.Optional;
-
 public class Module {
     private static final double WHEEL_RADIUS = Units.inchesToMeters(2.0);
 
@@ -63,12 +61,19 @@ public class Module {
         this.io = io;
         this.index = index;
 
+        // Set up shuffleboard
+        var tab = Shuffleboard.getTab(title);
+        realAngle = tab.add("Real Angle" + title, 0).getEntry();
+        realVelocity = tab.add("Real Velocity" + title, 0).getEntry();
+        targetAngle = tab.add("Target Angle" + title, 0).getEntry();
+        targetVelocity = tab.add("Target Velocity" + title, 0).getEntry();
+
         var config = configs[index];
 
         // Constants here may change for SIM
         driveFeedforward = config.driveFeedForward().toSimpleMotorFeedforward();
         driveFeedback = config.drivePid().toPidController();
-        turnFeedback = config.turnPid().toPidController();
+        turnFeedback =config.turnPid().toPidController();
 
         turnFeedback.enableContinuousInput(-Math.PI, Math.PI);
         setBrakeMode(true);
@@ -116,6 +121,11 @@ public class Module {
                                 + driveFeedback.calculate(inputs.driveVelocityRadPerSec, velocityRadPerSec));
             }
         }
+
+        // Logging
+        realAngle.setDouble(getState().angle.getDegrees());
+        realVelocity.setDouble(getState().speedMetersPerSecond);
+
     }
 
     /**
@@ -128,7 +138,11 @@ public class Module {
 
         // Update setpoints, controllers run in "periodic"
         angleSetpoint = optimizedState.angle;
-        speedSetpoint = Double.valueOf(optimizedState.speedMetersPerSecond);
+        speedSetpoint = optimizedState.speedMetersPerSecond;
+
+        // Logging
+        targetAngle.setDouble(angleSetpoint.getDegrees());
+        targetVelocity.setDouble(speedSetpoint);
 
         return optimizedState;
     }

@@ -13,6 +13,8 @@ import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
 import edu.wpi.first.wpilibj2.command.*;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import frc.robot.commands.*;
+import frc.robot.commands.autoCommands.Auto1Command;
+import frc.robot.commands.autoCommands.Auto2Command;
 import frc.robot.subsystems.TemplateSubsystem;
 import frc.robot.subsystems.drive.Drive;
 import frc.robot.subsystems.drive.GyroIONavX;
@@ -47,8 +49,7 @@ public class RobotContainer {
                 new ModuleIOTalonFX(FRONT_LEFT),
                 new ModuleIOTalonFX(FRONT_RIGHT),
                 new ModuleIOTalonFX(BACK_LEFT),
-                new ModuleIOTalonFX(BACK_RIGHT),
-                new PhotonCamera("limelight")//name must be the same as in photon vision
+                new ModuleIOTalonFX(BACK_RIGHT)
         );
 
         //Add in named commands for pathplanner
@@ -64,7 +65,7 @@ public class RobotContainer {
 
     //Actions run when robot is enabled
     public void robotEnabled() {
-        drive.setCurrentPose(new Pose2d(new Translation2d(0, 0), new Rotation2d(0)));
+        drive.setPose(new Pose2d(new Translation2d(0, 0), new Rotation2d(0)));
         drive.straightenWheels();
         drive.resetGyro();
         drive.setFieldState(true);
@@ -80,9 +81,8 @@ public class RobotContainer {
         driver.a().whileTrue(new TemplateCommand(templateSubsystem, Constants.Template.motorSpeed));
 
         //Drive
-        driver.povUp().onTrue(runOnce(drive::resetFieldPosition));
+        driver.povUp().onTrue(Commands.runOnce(() -> drive.setPose(new Pose2d(drive.getPose().getTranslation(), new Rotation2d())), drive));
         driver.povLeft().onTrue(runOnce(drive::toggleIsFieldOriented));
-        driver.povRight().onTrue(new DriveToPoseCommand(drive, 0, 0, 0));
 
         drive.setDefaultCommand(
                 DriveCommand.joystickDrive(
@@ -107,20 +107,20 @@ public class RobotContainer {
     //Pass pathplanner autos to robot
     public Command getAutonomousCommand() {
         AutoChoice autoChoice = autoChooser.getSelected();
-        String command;
+        Command command;
 
         switch (autoChoice) {
             case Auto1:
-                command = "Auto 1";
+                command = Auto1Command.create(drive, templateSubsystem);
                 break;
             case Auto2:
-                command = "Auto 2";
+                command = Auto2Command.create(drive, templateSubsystem);
                 break;
             default:
-                command = "Auto 1";
+                command = Auto1Command.create(drive, templateSubsystem);
         }
 
-        return new PathPlannerAuto(command);
+        return new ParallelCommandGroup(command);
     }
 }
 

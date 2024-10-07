@@ -31,40 +31,12 @@ public final class Constants {
         public static final double maxAngularAcceleration = maxLinearAcceleration / driveBaseRadius;
     }
 
-    public static final class PoseEstimation {
-        public static final SwerveDriveKinematics kinematics = new SwerveDriveKinematics(
-                // Front left
-                new Translation2d(Swerve.trackWidthX / 2.0, Swerve.trackWidthY / 2.0),
-                // Front right
-                new Translation2d(Swerve.trackWidthX / 2.0, -Swerve.trackWidthY / 2.0),
-                // Back left
-                new Translation2d(-Swerve.trackWidthX / 2.0, Swerve.trackWidthY / 2.0),
-                // Back right
-                new Translation2d(-Swerve.trackWidthX / 2.0, -Swerve.trackWidthY / 2.0)
-        );
-
-        public static final Transform3d CAMERA_TO_ROBOT = new Transform3d(//must change based on where camera is on robot
-                new Translation3d(-0.3425, 0.0, -0.233),
-                new Rotation3d()
-        );
-    }
-
     public static final class Template {
         public final static int pwmMotorChannel = 1;
         public final static int canMotorChannel = 2;
         public final static int encoderChannel1 = 1;
         public final static int encoderChannel2 = 2;
         public final static double motorSpeed = 1;
-    }
-    
-    public static final class PathPlanner {
-        public static final HolonomicPathFollowerConfig pathFollowerConfig = new HolonomicPathFollowerConfig(
-                new PIDConstants(.5, 0, 0), // 2.0 Translation constants 3
-                new PIDConstants(3, 0, 0), // 1.3 Rotation constants 3
-                Swerve.maxLinearSpeed,
-                driveBaseRadius, // Drive base radius (distance from center to furthest module)
-                new ReplanningConfig()
-        );
     }
     
     public static final double linearDeadband = 0.1;
