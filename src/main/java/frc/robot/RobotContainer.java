@@ -107,20 +107,20 @@ public class RobotContainer {
     //Pass pathplanner autos to robot
     public Command getAutonomousCommand() {
         AutoChoice autoChoice = autoChooser.getSelected();
-        Command command;
+        String command;
 
         switch (autoChoice) {
             case Auto1:
-                command = Auto1Command.create(drive, templateSubsystem);
+                command = "Auto 1";
                 break;
             case Auto2:
-                command = Auto2Command.create(drive, templateSubsystem);
+                command = "Auto 2";
                 break;
             default:
-                command = Auto1Command.create(drive, templateSubsystem);
+                command = "Auto 1";
         }
 
-        return new ParallelCommandGroup(command);
+        return new PathPlannerAuto(command);
     }
 }
 

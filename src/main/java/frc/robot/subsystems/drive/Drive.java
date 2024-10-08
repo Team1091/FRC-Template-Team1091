@@ -1,5 +1,7 @@
 package frc.robot.subsystems.drive;
 
+import com.pathplanner.lib.controllers.PPHolonomicDriveController;
+import com.pathplanner.lib.util.PIDConstants;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
@@ -15,7 +17,10 @@ import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.shuffleboard.Shuffleboard;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 
+import com.pathplanner.lib.auto.AutoBuilder;
+
 import static frc.robot.Constants.Swerve.*;
+import static frc.robot.Constants.PathPlanner.*;
 
 
 // import frc.robot.util.LocalADStarAK;
@@ -46,6 +51,7 @@ public class Drive extends SubsystemBase {
     private Rotation2d lastGyroRotation = new Rotation2d();
     private StructArrayPublisher<SwerveModuleState> publisher;
     private boolean isFieldOriented = true;
+    private ChassisSpeeds speeds;
 
     public Drive(
             GyroIO gyroIO,
@@ -69,6 +75,16 @@ public class Drive extends SubsystemBase {
         poseXDebug = Shuffleboard.getTab("General").add("Pose X", 0).getEntry();
         poseYDebug = Shuffleboard.getTab("General").add("Pose Y", 0).getEntry();
         poseRotDebug = Shuffleboard.getTab("General").add("Pose Rotation", 0).getEntry();
+
+        AutoBuilder.configureHolonomic(
+                this::getPose, // Robot pose supplier
+                this::setPose, // Method to reset odometry (will be called if your auto has a starting pose)
+                this::getRobotRelativeSpeeds, // ChassisSpeeds supplier. MUST BE ROBOT RELATIVE
+                this::runVelocity, // Method that will drive the robot given ROBOT RELATIVE ChassisSpeeds. Also optionally outputs individual module feedforwards
+                pathFollowerConfig, // The robot configuration
+                this::isOnRed,
+                this // Reference to this subsystem to set requirements
+        );
     }
 
     public void periodic() {
@@ -117,28 +133,32 @@ public class Drive extends SubsystemBase {
 
     }
 
+    public void runCommandVelocity(Translation2d linearVelocity, double omega){
+        Rotation2d rotation;
+        if (isFieldOriented) {
+            rotation = getRotation();
+        } else {
+            rotation = new Rotation2d(0);
+        }
+        ChassisSpeeds chassisSpeeds = ChassisSpeeds.fromFieldRelativeSpeeds(
+                linearVelocity.getX() * MAX_LINEAR_SPEED,
+                linearVelocity.getY() * MAX_LINEAR_SPEED,
+                omega * MAX_ANGULAR_SPEED,
+                rotation
+        );
+        runVelocity(chassisSpeeds);
+    }
+
     /**
      * Runs the drive at the desired velocity.
-     *
-//     * @param speeds Speeds in meters/sec
+     * <p>
+     * //     * @param speeds Speeds in meters/sec
      */
 
-        public void runVelocity(Translation2d linearVelocity, double omega) {
-            Rotation2d rotation;
-            if (isFieldOriented) {
-                rotation = getRotation();
-            } else {
-                rotation = new Rotation2d(0);
-            }
-            ChassisSpeeds speeds = ChassisSpeeds.fromFieldRelativeSpeeds(
-                    linearVelocity.getX() * MAX_LINEAR_SPEED,
-                    linearVelocity.getY() * MAX_LINEAR_SPEED,
-                    omega * MAX_ANGULAR_SPEED,
-                    rotation
-            );
-
+    public void runVelocity(ChassisSpeeds chassisSpeeds) {
+        speeds = chassisSpeeds;
         // Calculate module setpoints
-        ChassisSpeeds discreteSpeeds = ChassisSpeeds.discretize(speeds, 0.02);
+        ChassisSpeeds discreteSpeeds = ChassisSpeeds.discretize(chassisSpeeds, 0.02);
         SwerveModuleState[] setpointStates = kinematics.toSwerveModuleStates(discreteSpeeds);
         SwerveDriveKinematics.desaturateWheelSpeeds(setpointStates, MAX_LINEAR_SPEED);
 
@@ -158,11 +178,13 @@ public class Drive extends SubsystemBase {
      * Stops the drive.
      */
     public void stop() {
-        runVelocity(new Translation2d(), 0);
+        runVelocity(new ChassisSpeeds());
     }
-    public void setFieldState(boolean bool){
+
+    public void setFieldState(boolean bool) {
         isFieldOriented = bool;
     }
+
     public void toggleIsFieldOriented() {
         isFieldOriented = !isFieldOriented;
     }
@@ -236,6 +258,10 @@ public class Drive extends SubsystemBase {
         return pose.getRotation();
     }
 
+    public ChassisSpeeds getRobotRelativeSpeeds() {
+        return speeds;
+    }
+
     /**
      * Resets the current odometry pose.
      */
@@ -245,6 +271,14 @@ public class Drive extends SubsystemBase {
 
     public void resetGyro() {
         gyroIO.resetGyro();
+    }
+
+    public boolean isOnRed(){
+        var alliance = DriverStation.getAlliance();
+        if (alliance.isPresent()) {
+            return alliance.get() == DriverStation.Alliance.Red;
+        }
+        return false;
     }
 
     /**

@@ -38,6 +38,16 @@ public final class Constants {
         public final static int encoderChannel2 = 2;
         public final static double motorSpeed = 1;
     }
+
+    public static final class PathPlanner {
+        public static final HolonomicPathFollowerConfig pathFollowerConfig = new HolonomicPathFollowerConfig(
+                new PIDConstants(.5, 0, 0), // 2.0 Translation constants 3
+                new PIDConstants(3, 0, 0), // 1.3 Rotation constants 3
+                Swerve.maxLinearSpeed,
+                driveBaseRadius, // Drive base radius (distance from center to furthest module)
+                new ReplanningConfig());
+
+    }
     
     public static final double linearDeadband = 0.1;
     public static final double rotationalDeadband = .1;

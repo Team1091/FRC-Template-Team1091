@@ -52,7 +52,7 @@ public class DriveCommand {
 
                     // Convert to field relative speeds & send command
 
-                    drive.setOrientation(linearVelocity, omega);
+                    drive.runCommandVelocity(linearVelocity, omega);
                 },
                 drive);
     }
