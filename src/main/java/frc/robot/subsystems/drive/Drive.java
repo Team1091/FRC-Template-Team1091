@@ -46,6 +46,7 @@ public class Drive extends SubsystemBase {
     private Rotation2d lastGyroRotation = new Rotation2d();
     private StructArrayPublisher<SwerveModuleState> publisher;
     private boolean isFieldOriented = true;
+    private ChassisSpeeds speeds;
 
     public Drive(
             GyroIO gyroIO,
@@ -117,28 +118,32 @@ public class Drive extends SubsystemBase {
 
     }
 
+    public void runCommandVelocity(Translation2d linearVelocity, double omega){
+        Rotation2d rotation;
+        if (isFieldOriented) {
+            rotation = getRotation();
+        } else {
+            rotation = new Rotation2d(0);
+        }
+        ChassisSpeeds chassisSpeeds = ChassisSpeeds.fromFieldRelativeSpeeds(
+                linearVelocity.getX() * MAX_LINEAR_SPEED,
+                linearVelocity.getY() * MAX_LINEAR_SPEED,
+                omega * MAX_ANGULAR_SPEED,
+                rotation
+        );
+        runVelocity(chassisSpeeds);
+    }
+
     /**
      * Runs the drive at the desired velocity.
-     *
-//     * @param speeds Speeds in meters/sec
+     * <p>
+     * //     * @param speeds Speeds in meters/sec
      */
 
-        public void runVelocity(Translation2d linearVelocity, double omega) {
-            Rotation2d rotation;
-            if (isFieldOriented) {
-                rotation = getRotation();
-            } else {
-                rotation = new Rotation2d(0);
-            }
-            ChassisSpeeds speeds = ChassisSpeeds.fromFieldRelativeSpeeds(
-                    linearVelocity.getX() * MAX_LINEAR_SPEED,
-                    linearVelocity.getY() * MAX_LINEAR_SPEED,
-                    omega * MAX_ANGULAR_SPEED,
-                    rotation
-            );
-
+    public void runVelocity(ChassisSpeeds chassisSpeeds) {
+        speeds = chassisSpeeds;
         // Calculate module setpoints
-        ChassisSpeeds discreteSpeeds = ChassisSpeeds.discretize(speeds, 0.02);
+        ChassisSpeeds discreteSpeeds = ChassisSpeeds.discretize(chassisSpeeds, 0.02);
         SwerveModuleState[] setpointStates = kinematics.toSwerveModuleStates(discreteSpeeds);
         SwerveDriveKinematics.desaturateWheelSpeeds(setpointStates, MAX_LINEAR_SPEED);
 
@@ -158,7 +163,7 @@ public class Drive extends SubsystemBase {
      * Stops the drive.
      */
     public void stop() {
-        runVelocity(new Translation2d(), 0);
+        runVelocity(new ChassisSpeeds());
     }
     public void setFieldState(boolean bool){
         isFieldOriented = bool;
