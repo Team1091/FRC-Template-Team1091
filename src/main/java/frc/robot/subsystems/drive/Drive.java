@@ -47,6 +47,7 @@ public class Drive extends SubsystemBase {
     private StructArrayPublisher<SwerveModuleState> publisher;
     private boolean isFieldOriented = true;
     private ChassisSpeeds speeds;
+    SwerveModulePosition[] wheelDeltas;
 
     public Drive(
             GyroIO gyroIO,
@@ -86,7 +87,7 @@ public class Drive extends SubsystemBase {
         }
 
         // Update odometry
-        SwerveModulePosition[] wheelDeltas = new SwerveModulePosition[4];
+        wheelDeltas = new SwerveModulePosition[4];
         for (int i = 0; i < 4; i++) {
             wheelDeltas[i] = modules[i].getPositionDelta();
         }
@@ -94,10 +95,10 @@ public class Drive extends SubsystemBase {
         // The twist represents the motion of the robot since the last
         // loop cycle in x, y, and theta based only on the modules,
         // without the gyro. The gyro is always disconnected in simulation.
-        var twist = kinematics.toTwist2d(wheelDeltas);
-        gyroYawDebug.setDouble(gyroInputs.yawPosition.getDegrees());
-        gyroRollDebug.setDouble(gyroInputs.rollPosition.getDegrees());
-        gyroPitchDebug.setDouble(gyroInputs.pitchPosition.getDegrees());
+//        var twist = kinematics.toTwist2d(wheelDeltas);
+//        gyroYawDebug.setDouble(gyroInputs.yawPosition.getDegrees());
+//        gyroRollDebug.setDouble(gyroInputs.rollPosition.getDegrees());
+//        gyroPitchDebug.setDouble(gyroInputs.pitchPosition.getDegrees());
 //        if (gyroInputs.connected) {
 //            // If the gyro is connected, replace the theta component of the twist
 //            // with the change in angle since the last loop cycle.
@@ -109,11 +110,11 @@ public class Drive extends SubsystemBase {
 //            lastGyroRotation = gyroInputs.yawPosition;
 //        }
         // Apply the twist (change since last loop cycle) to the current pose
-        pose = pose.exp(twist);
-
-        poseXDebug.setDouble(pose.getX());
-        poseYDebug.setDouble(pose.getY());
-        poseRotDebug.setDouble(pose.getRotation().getDegrees());
+//        pose = pose.exp(twist);
+//
+//        poseXDebug.setDouble(pose.getX());
+//        poseYDebug.setDouble(pose.getY());
+//        poseRotDebug.setDouble(pose.getRotation().getDegrees());
 //
 
     }
@@ -226,19 +227,21 @@ public class Drive extends SubsystemBase {
         return states;
     }
 
+    public SwerveModulePosition[] getModulePositions() {
+        return wheelDeltas;
+    }
+
     /**
      * Returns the current odometry pose.
      */
 //    @AutoLogOutput(key = "Odometry/Robot")
-    public Pose2d getPose() {
-        return pose;
-    }
+
 
     /**
      * Returns the current odometry rotation.
      */
     public Rotation2d getRotation() {
-        return pose.getRotation();
+        return gyroInputs.yawPosition;
     }
 
     public ChassisSpeeds getRobotRelativeSpeeds() {
@@ -248,9 +251,6 @@ public class Drive extends SubsystemBase {
     /**
      * Resets the current odometry pose.
      */
-    public void setPose(Pose2d pose) {
-        this.pose = pose;
-    }
 
     public void resetGyro() {
         gyroIO.resetGyro();

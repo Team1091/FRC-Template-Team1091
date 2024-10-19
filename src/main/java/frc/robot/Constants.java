@@ -29,6 +29,7 @@ public final class Constants {
         public static final double maxLinearAcceleration = Units.feetToMeters(10);
         public static final double maxAngularSpeed = maxLinearSpeed / driveBaseRadius;
         public static final double maxAngularAcceleration = maxLinearAcceleration / driveBaseRadius;
+        public static final SwerveDriveKinematics kinematics = new SwerveDriveKinematics(new Translation2d(trackWidthX/2, trackWidthY/2));
     }
 
     public static final class Template {

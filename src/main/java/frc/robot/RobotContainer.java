@@ -15,6 +15,7 @@ import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import frc.robot.commands.*;
 import frc.robot.commands.autoCommands.Auto1Command;
 import frc.robot.commands.autoCommands.Auto2Command;
+import frc.robot.subsystems.PoseEstimationSubsystem;
 import frc.robot.subsystems.TemplateSubsystem;
 import frc.robot.subsystems.drive.Drive;
 import frc.robot.subsystems.drive.GyroIONavX;
@@ -31,7 +32,8 @@ import org.photonvision.PhotonCamera;
 
 public class RobotContainer {
     // Subsystems
-    private Drive drive;
+    private final Drive drive;
+    private final PoseEstimationSubsystem poseEstimationSubsystem;
     private final TemplateSubsystem templateSubsystem = new TemplateSubsystem();
 
     //Miscellaneous
@@ -51,6 +53,10 @@ public class RobotContainer {
                 new ModuleIOTalonFX(BACK_LEFT),
                 new ModuleIOTalonFX(BACK_RIGHT)
         );
+        poseEstimationSubsystem = new PoseEstimationSubsystem(
+                drive::getRotation,
+                drive::getModulePositions
+        );
 
         //Add in named commands for pathplanner
         NamedCommands.registerCommand("Template", new TemplateCommand(templateSubsystem, Constants.Template.motorSpeed));
@@ -65,7 +71,7 @@ public class RobotContainer {
 
     //Actions run when robot is enabled
     public void robotEnabled() {
-        drive.setPose(new Pose2d(new Translation2d(0, 0), new Rotation2d(0)));
+        poseEstimationSubsystem.setCurrentPose(new Pose2d(new Translation2d(0, 0), new Rotation2d(0)));
         drive.straightenWheels();
         drive.resetGyro();
         drive.setFieldState(true);
@@ -81,7 +87,7 @@ public class RobotContainer {
         driver.a().whileTrue(new TemplateCommand(templateSubsystem, Constants.Template.motorSpeed));
 
         //Drive
-        driver.povUp().onTrue(Commands.runOnce(() -> drive.setPose(new Pose2d(drive.getPose().getTranslation(), new Rotation2d())), drive));
+        driver.povUp().onTrue(Commands.runOnce(() -> poseEstimationSubsystem.setCurrentPose(new Pose2d(poseEstimationSubsystem.getCurrentPose().getTranslation(), new Rotation2d())), poseEstimationSubsystem));
         driver.povLeft().onTrue(runOnce(drive::toggleIsFieldOriented));
 
         drive.setDefaultCommand(
