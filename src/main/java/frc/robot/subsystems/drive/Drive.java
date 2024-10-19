@@ -241,6 +241,10 @@ public class Drive extends SubsystemBase {
         return pose.getRotation();
     }
 
+    public ChassisSpeeds getRobotRelativeSpeeds() {
+        return speeds;
+    }
+
     /**
      * Resets the current odometry pose.
      */
