@@ -53,13 +53,13 @@ public class RobotContainer {
                 new ModuleIOTalonFX(BACK_LEFT),
                 new ModuleIOTalonFX(BACK_RIGHT)
         );
+
         poseEstimationSubsystem = new PoseEstimationSubsystem(
-                drive::getRotation,
+                drive::getGyroRotation,
                 drive::getModulePositions
         );
 
-        //Add in named commands for pathplanner
-        NamedCommands.registerCommand("Template", new TemplateCommand(templateSubsystem, Constants.Template.motorSpeed));
+        drive.setPoseEstimationSubsystem(poseEstimationSubsystem);
 
         configureButtonBindings();
 
