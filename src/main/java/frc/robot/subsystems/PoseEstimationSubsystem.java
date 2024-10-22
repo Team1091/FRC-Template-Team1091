@@ -24,7 +24,7 @@ public class PoseEstimationSubsystem extends SubsystemBase {
     private final Supplier<Rotation2d> rotationSupplier;
     private final Supplier<SwerveModulePosition[]> modulePositionSupplier;
 
-    private GenericEntry shuffleBoardField;
+    private GenericEntry sbField;
     private Field2d field;
 
     public PoseEstimationSubsystem(Supplier<Rotation2d> rotationSupplier, Supplier<SwerveModulePosition[]> modulePositionSupplier){
@@ -39,7 +39,7 @@ public class PoseEstimationSubsystem extends SubsystemBase {
                 stateStdDevs,
                 visionMeasurementStdDevs);
 
-        shuffleBoardField = Shuffleboard.getTab("Main").add("Field", "Field2d", field).getEntry();
+        sbField = Shuffleboard.getTab("Main").add("Field", "Field2d", field).getEntry();
     }
 
     @Override
@@ -51,7 +51,7 @@ public class PoseEstimationSubsystem extends SubsystemBase {
                 limelightMeasurement.pose,
                 limelightMeasurement.timestampSeconds);
 
-        shuffleBoardField.setValue(field);
+        sbField.setValue(field);
     }
 
     public Pose2d getCurrentPose() {

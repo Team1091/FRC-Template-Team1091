@@ -24,7 +24,6 @@ public class Drive extends SubsystemBase {
     private final GyroIO.GyroIOInputs gyroInputs = new GyroIO.GyroIOInputs();
     private final Module[] modules = new Module[4]; // FL, FR, BL, BR
 
-    private StructArrayPublisher<SwerveModuleState> publisher;
     private boolean isFieldOriented = true;
     private ChassisSpeeds speeds;
     private SwerveModulePosition[] wheelDeltas;
@@ -41,11 +40,6 @@ public class Drive extends SubsystemBase {
         modules[FRONT_RIGHT] = new Module(frModuleIO, 1, "FR");
         modules[BACK_LEFT] = new Module(blModuleIO, 2, "BL");
         modules[BACK_RIGHT] = new Module(brModuleIO, 3, "BR");
-
-        publisher = NetworkTableInstance
-                .getDefault()
-                .getStructArrayTopic("MyStates", SwerveModuleState.struct)
-                .publish();
     }
 
     public void periodic() {
@@ -76,7 +70,7 @@ public class Drive extends SubsystemBase {
     public void runVelocity(Translation2d linearVelocity, double omega){
         Rotation2d rotation;
         if (isFieldOriented) {
-            rotation = getPoseRotation();
+            rotation = getPose().getRotation();
         } else {
             rotation = new Rotation2d(0);
         }
@@ -104,8 +98,6 @@ public class Drive extends SubsystemBase {
         }
 
         optimizedSetpointStates = setpointStates;
-
-        publisher.set(optimizedSetpointStates);
     }
 
     /**
@@ -183,8 +175,8 @@ public class Drive extends SubsystemBase {
         return gyroInputs.yawPosition;
     }
 
-    public Rotation2d getPoseRotation() {
-        return poseEstimationSubsystem.getCurrentPose().getRotation();
+    public Rotation2d getPose() {
+        return poseEstimationSubsystem.getCurrentPose();
     }
 
     public ChassisSpeeds getRobotRelativeSpeeds() {
