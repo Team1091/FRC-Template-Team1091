@@ -39,6 +39,11 @@ public final class Constants {
 
     }
 
+    public static final class PoseEstimation {
+        public final static Vector<N3> stateStdDevs = VecBuilder.fill(0.1, 0.1, 0.1);
+        public final static Vector<N3> visionMeasurementStdDevs = VecBuilder.fill(.7,.7,9999999);
+    }
+
     public static final class Template {
         public final static int pwmMotorChannel = 1;
         public final static int canMotorChannel = 2;

@@ -17,14 +17,10 @@ import frc.robot.LimelightHelpers;
 import java.util.function.Supplier;
 
 public class PoseEstimationSubsystem extends SubsystemBase {
-    private static final Vector<N3> stateStdDevs = VecBuilder.fill(0.1, 0.1, 0.1);
-    private static final Vector<N3> visionMeasurementStdDevs = VecBuilder.fill(.7,.7,9999999);
-
     private final SwerveDrivePoseEstimator poseEstimator;
     private final Supplier<Rotation2d> rotationSupplier;
     private final Supplier<SwerveModulePosition[]> modulePositionSupplier;
 
-    private GenericEntry sbField;
     private Field2d field;
 
     public PoseEstimationSubsystem(Supplier<Rotation2d> rotationSupplier, Supplier<SwerveModulePosition[]> modulePositionSupplier){
@@ -36,10 +32,10 @@ public class PoseEstimationSubsystem extends SubsystemBase {
                 rotationSupplier.get(),
                 modulePositionSupplier.get(),
                 new Pose2d(),
-                stateStdDevs,
-                visionMeasurementStdDevs);
+                Constants.PoseEstimation.stateStdDevs,
+                Constants.PoseEstimation.visionMeasurementStdDevs);
 
-        sbField = Shuffleboard.getTab("Main").add("Field", "Field2d", field).getEntry();
+        Shuffleboard.getTab("Main").add("Field", "Field2d", field);
     }
 
     @Override
@@ -50,8 +46,6 @@ public class PoseEstimationSubsystem extends SubsystemBase {
         poseEstimator.addVisionMeasurement(
                 limelightMeasurement.pose,
                 limelightMeasurement.timestampSeconds);
-
-        sbField.setValue(field);
     }
 
     public Pose2d getCurrentPose() {
