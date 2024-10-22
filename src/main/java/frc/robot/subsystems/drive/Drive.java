@@ -64,8 +64,6 @@ public class Drive extends SubsystemBase {
 
     /**
      * Runs the drive at the desired velocity.
-     * <p>
-     * //     * @param speeds Speeds in meters/sec
      */
     public void runVelocity(Translation2d linearVelocity, double omega){
         Rotation2d rotation;
@@ -106,12 +104,6 @@ public class Drive extends SubsystemBase {
     public void stop() {
         runVelocity(new ChassisSpeeds());
     }
-    public void setFieldState(boolean bool){
-        isFieldOriented = bool;
-    }
-    public void toggleIsFieldOriented() {
-        isFieldOriented = !isFieldOriented;
-    }
 
     /**
      * Stops the drive and turns the modules to an X arrangement to resist movement. The modules will
@@ -133,6 +125,14 @@ public class Drive extends SubsystemBase {
         }
         kinematics.resetHeadings(headings);
         stop();
+    }
+
+        public void setFieldState(boolean bool){
+        isFieldOriented = bool;
+    }
+    
+    public void toggleIsFieldOriented() {
+        isFieldOriented = !isFieldOriented;
     }
 
     /**
