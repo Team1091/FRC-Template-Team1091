@@ -5,10 +5,11 @@ import edu.wpi.first.math.Vector;
 import edu.wpi.first.math.estimator.SwerveDrivePoseEstimator;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
-import edu.wpi.first.math.kinematics.SwerveDriveKinematics;
-import edu.wpi.first.math.kinematics.SwerveDriveWheelPositions;
 import edu.wpi.first.math.kinematics.SwerveModulePosition;
 import edu.wpi.first.math.numbers.N3;
+import edu.wpi.first.networktables.GenericEntry;
+import edu.wpi.first.wpilibj.shuffleboard.Shuffleboard;
+import edu.wpi.first.wpilibj.smartdashboard.Field2d;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.Constants;
 import frc.robot.LimelightHelpers;
@@ -18,9 +19,13 @@ import java.util.function.Supplier;
 public class PoseEstimationSubsystem extends SubsystemBase {
     private static final Vector<N3> stateStdDevs = VecBuilder.fill(0.1, 0.1, 0.1);
     private static final Vector<N3> visionMeasurementStdDevs = VecBuilder.fill(.7,.7,9999999);
+
     private final SwerveDrivePoseEstimator poseEstimator;
     private final Supplier<Rotation2d> rotationSupplier;
     private final Supplier<SwerveModulePosition[]> modulePositionSupplier;
+
+    private GenericEntry shuffleBoardField;
+    private Field2d field;
 
     public PoseEstimationSubsystem(Supplier<Rotation2d> rotationSupplier, Supplier<SwerveModulePosition[]> modulePositionSupplier){
         this.rotationSupplier = rotationSupplier;
@@ -33,6 +38,8 @@ public class PoseEstimationSubsystem extends SubsystemBase {
                 new Pose2d(),
                 stateStdDevs,
                 visionMeasurementStdDevs);
+
+        shuffleBoardField = Shuffleboard.getTab("Main").add("Field", "Field2d", field).getEntry();
     }
 
     @Override
@@ -43,6 +50,8 @@ public class PoseEstimationSubsystem extends SubsystemBase {
         poseEstimator.addVisionMeasurement(
                 limelightMeasurement.pose,
                 limelightMeasurement.timestampSeconds);
+
+        shuffleBoardField.setValue(field);
     }
 
     public Pose2d getCurrentPose() {
