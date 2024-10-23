@@ -175,7 +175,7 @@ public class Drive extends SubsystemBase {
         return gyroInputs.yawPosition;
     }
 
-    public Rotation2d getPose() {
+    public Pose2d getPose() {
         return poseEstimationSubsystem.getCurrentPose();
     }
 
