@@ -16,7 +16,6 @@ import frc.robot.commands.*;
 import frc.robot.commands.autoCommands.Auto1Command;
 import frc.robot.commands.autoCommands.Auto2Command;
 import frc.robot.subsystems.PoseEstimationSubsystem;
-import frc.robot.subsystems.TemplateSubsystem;
 import frc.robot.subsystems.drive.Drive;
 import frc.robot.subsystems.drive.GyroIONavX;
 import frc.robot.subsystems.drive.GyroIOPigeon2;
@@ -34,7 +33,6 @@ public class RobotContainer {
     // Subsystems
     private final Drive drive;
     private final PoseEstimationSubsystem poseEstimationSubsystem;
-    private final TemplateSubsystem templateSubsystem = new TemplateSubsystem();
 
     //Miscellaneous
     private final SendableChooser<AutoChoice> autoChooser = new SendableChooser<>();
@@ -75,17 +73,11 @@ public class RobotContainer {
         drive.straightenWheels();
         drive.resetGyro();
         drive.setFieldState(true);
-
-        templateSubsystem.resetEncoder();
     }
 
 
     //Map commands to controller buttons
     private void configureButtonBindings() {
-
-        //Template
-        driver.a().whileTrue(new TemplateCommand(templateSubsystem, Constants.Template.motorSpeed));
-
         //Drive
         driver.povUp().onTrue(Commands.runOnce(() -> poseEstimationSubsystem.setCurrentPose(new Pose2d(poseEstimationSubsystem.getCurrentPose().getTranslation(), new Rotation2d())), poseEstimationSubsystem));
         driver.povLeft().onTrue(runOnce(drive::toggleIsFieldOriented));
@@ -107,26 +99,6 @@ public class RobotContainer {
                         }
                 )
         );
-    }
-
-
-    //Pass pathplanner autos to robot
-    public Command getAutonomousCommand() {
-        AutoChoice autoChoice = autoChooser.getSelected();
-        Command command;
-
-        switch (autoChoice) {
-            case Auto1:
-                command = Auto1Command.create(drive, templateSubsystem);
-                break;
-            case Auto2:
-                command = Auto2Command.create(drive, templateSubsystem);
-                break;
-            default:
-                command = Auto1Command.create(drive, templateSubsystem);
-        }
-
-        return new ParallelCommandGroup(command);
     }
 }
 
