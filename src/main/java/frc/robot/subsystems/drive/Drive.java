@@ -40,6 +40,10 @@ public class Drive extends SubsystemBase {
         modules[FRONT_RIGHT] = new Module(frModuleIO, 1, "FR");
         modules[BACK_LEFT] = new Module(blModuleIO, 2, "BL");
         modules[BACK_RIGHT] = new Module(brModuleIO, 3, "BR");
+
+        for (int i = 0; i < 4; i++) {
+            wheelDeltas[i] = modules[i].getPositionDelta();
+        }
     }
 
     public void periodic() {
@@ -56,7 +60,6 @@ public class Drive extends SubsystemBase {
         }
 
         // Update odometry
-        wheelDeltas = new SwerveModulePosition[4];
         for (int i = 0; i < 4; i++) {
             wheelDeltas[i] = modules[i].getPositionDelta();
         }
