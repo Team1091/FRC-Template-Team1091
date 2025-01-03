@@ -48,8 +48,8 @@ public final class Constants {
     }
 
     public static final class Template {
-        public final static int pwmMotorChannel = 1;
-        public final static int canMotorChannel = 2;
+        public final static int pwmMotorChannel = 19;
+        public final static int canMotorChannel = 20;
         public final static int encoderChannel1 = 1;
         public final static int encoderChannel2 = 2;
         public final static double motorSpeed = 1;

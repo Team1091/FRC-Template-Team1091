@@ -26,7 +26,7 @@ public class Drive extends SubsystemBase {
 
     private boolean isFieldOriented = true;
     private ChassisSpeeds speeds;
-    private SwerveModulePosition[] wheelDeltas;
+    private SwerveModulePosition[] wheelDeltas = new SwerveModulePosition[4];
     private PoseEstimationSubsystem poseEstimationSubsystem;
 
     public Drive(
@@ -40,6 +40,9 @@ public class Drive extends SubsystemBase {
         modules[FRONT_RIGHT] = new Module(frModuleIO, 1, "FR");
         modules[BACK_LEFT] = new Module(blModuleIO, 2, "BL");
         modules[BACK_RIGHT] = new Module(brModuleIO, 3, "BR");
+        for (int i = 0; i < 4; i++) {
+            wheelDeltas[i] = new SwerveModulePosition();
+        }
     }
 
     public void periodic() {
